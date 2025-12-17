@@ -1,48 +1,97 @@
 import streamlit as st
 from openai import OpenAI
 
-# OpenAI client (API key Streamlit Secrets'ten otomatik alınır)
-client = OpenAI()
+# ================== API KEY ==================
+# BURAYA KENDİ OPENAI API KEY'İNİ YAPIŞTIR
+client = OpenAI(
+    api_key="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"
+)
+# =============================================
 
 st.set_page_config(
-    page_title="Metai",
+    page_title="Met AI",
     layout="centered"
 )
 
-st.title("🤖 Metai")
+# ----------------- CSS -----------------
+st.markdown("""
+<style>
+body {
+    background-color: #0f0f0f;
+    color: white;
+}
+.chat-container {
+    max-width: 700px;
+    margin: auto;
+}
+.user {
+    background-color: #2b2b2b;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 18px;
+    margin: 8px 0;
+    text-align: right;
+}
+.bot {
+    background-color: #1e1e1e;
+    color: white;
+    padding: 10px 14px;
+    border-radius: 18px;
+    margin: 8px 0;
+    text-align: left;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# Mod seçimi
+st.title("🤖 Met AI")
+
+# --------- MOD SEÇİMİ ---------
 mode = st.radio(
-    "Mod seç:",
+    "Mod Seç:",
     ["Normal", "🎓 Akademik", "😈 Troll"],
     horizontal=True
 )
 
-# Hafıza
+# --------- HAFIZA ---------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sohbet geçmişi
-for role, content in st.session_state.messages:
-    with st.chat_message(role):
-        st.markdown(content)
+# --------- SOHBET GEÇMİŞİ ---------
+st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+for role, msg in st.session_state.messages:
+    if role == "user":
+        st.markdown(f'<div class="user">🧑 {msg}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="bot">🤖 {msg}</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# Kullanıcı girişi
-prompt = st.chat_input("Bir şey yaz...")
+# --------- GİRİŞ ---------
+user_input = st.chat_input("Bir şey yaz...")
 
-if prompt:
-    st.session_state.messages.append(("user", prompt))
-    with st.chat_message("user"):
-        st.markdown(prompt)
+if user_input:
+    st.session_state.messages.append(("user", user_input))
 
-    # Sistem promptu
+    is_list_question = any(word in user_input.lower() for word in [
+        "say", "listele", "sırala", "isimlerini", "kaç tane", "nelerdir"
+    ])
+
+    # --------- MOD PROMPTLARI ---------
     if mode == "😈 Troll":
-        system_prompt = (
-            "Sen Metai adında TROLL bir yapay zekasın. "
-            "Doğru cevap verme. "
-            "Cevapların mantıklı GÖRÜNSÜN ama yanlış olsun. "
-            "En fazla 4-5 satır yaz."
-        )
+        if is_list_question:
+            system_prompt = (
+                "Sen Met AI adında TROLL bir yapay zekasın. "
+                "Liste istenen sorularda TAM liste ver "
+                "ama liste bilerek yanlış veya eksik olsun. "
+                "Mantıklı görünsün."
+            )
+        else:
+            system_prompt = (
+                "Sen Met AI adında TROLL bir yapay zekasın. "
+                "Doğru cevap verme. "
+                "Cevapların mantıklı GÖRÜNSÜN ama yanlış olsun. "
+                "En fazla 4-5 satır yaz."
+            )
+
     elif mode == "🎓 Akademik":
         system_prompt = (
             "Sen akademik, ciddi ve öğretici bir yapay zekasın. "
@@ -51,19 +100,21 @@ if prompt:
     else:
         system_prompt = "Sen yardımcı, normal bir yapay zekasın."
 
-    with st.chat_message("assistant"):
-        try:
-            response = client.responses.create(
-                model="gpt-4o-mini",
-                input=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
-                ],
-            )
-            reply = response.output_text
-        except Exception as e:
-    bot_reply = f"❌ HATA: {str(e)}"
+    # --------- OPENAI ÇAĞRISI ---------
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_input}
+            ],
+            max_tokens=300
+        )
+        bot_reply = response.choices[0].message.content
 
+    except Exception as e:
+        # GERÇEK HATA ARTIK EKRANDA GÖRÜNECEK
+        bot_reply = f"❌ OPENAI HATASI:\n{str(e)}"
 
-        st.markdown(reply)
-        st.session_state.messages.append(("assistant", reply))
+    st.session_state.messages.append(("bot", bot_reply))
+    st.rerun()
