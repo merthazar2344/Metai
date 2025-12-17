@@ -4,7 +4,7 @@ from openai import OpenAI
 # ================== API KEY ==================
 # BURAYA KENDİ OPENAI API KEY'İNİ YAPIŞTIR
 client = OpenAI(
-    api_key="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"
+    api_key="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"
 )
 # =============================================
 
@@ -118,3 +118,4 @@ if user_input:
 
     st.session_state.messages.append(("bot", bot_reply))
     st.rerun()
+
